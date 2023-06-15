@@ -21,40 +21,40 @@
 #include <QPropertyAnimation>
 
 #include "qt3dwindow.h"
-
-// #include "orbittransformcontroller.h"
 #include "qorbitcameracontroller.h"
 
+#include "sme/model.hpp"
+#include "sme/image_stack.hpp"
 
-void addCubes(Qt3DCore::QEntity* rootEntity, const QColor& color, const QList<QVector3D>& positions){
-    // Material
-    auto *material = new Qt3DExtras::QDiffuseSpecularMaterial(rootEntity);
-    material->setAmbient(color);
-    for (const auto& position : positions){
-        // cuboid entity
-        Qt3DCore::QEntity *cuboidEntity = new Qt3DCore::QEntity(rootEntity);
-        // cube mesh
-        Qt3DExtras::QCuboidMesh *cuboid = new Qt3DExtras::QCuboidMesh();
-        cuboidEntity->addComponent(cuboid);
-        // cube transform
-        Qt3DCore::QTransform *cuboidTransform = new Qt3DCore::QTransform();
-        cuboidTransform->setScale(1.0f);
-        cuboidTransform->setTranslation(position);
-        cuboidEntity->addComponent(cuboidTransform);
-        // cube material
-        cuboidEntity->addComponent(material);
-    }
-}
-
-Qt3DCore::QEntity *createScene()
-{
-    // Root entity
+Qt3DCore::QEntity *createScene(const sme::common::ImageStack& imageStack){
     Qt3DCore::QEntity *rootEntity = new Qt3DCore::QEntity;
 
-    // Cube locations
-    QList<QVector3D> positions{{5.0f, -4.0f, 0.0f}, {4.0f, -4.0f, 0.0f}, {3.0f, -4.0f, 0.0f}, {3.0f, -3.0f, 0.0f}};
-    addCubes(rootEntity, QColor(255,128,0), positions);
+    // for (std::size_t iz=0; iz<imageStack.volume().depth(); ++iz){
+    //     for(int iy=0; iy<imageStack.volume().height(); ++iy){
+    //         for(int ix=0; ix<imageStack.volume().width(); ++ix){
 
+
+    for (std::size_t iz=10; iz<20; ++iz){
+     for(int iy=20; iy<30; ++iy){
+        for(int ix=20; ix<30; ++ix){
+                // material with color
+                auto *material = new Qt3DExtras::QDiffuseSpecularMaterial(rootEntity);
+                material->setAmbient(imageStack[iz].pixelColor(ix, iy));
+                // cuboid entity
+                Qt3DCore::QEntity *cuboidEntity = new Qt3DCore::QEntity(rootEntity);
+                // cube mesh
+                Qt3DExtras::QCuboidMesh *cuboid = new Qt3DExtras::QCuboidMesh();
+                cuboidEntity->addComponent(cuboid);
+                // cube transform
+                Qt3DCore::QTransform *cuboidTransform = new Qt3DCore::QTransform();
+                cuboidTransform->setScale(1.0f);
+                cuboidTransform->setTranslation({static_cast<float>(ix),static_cast<float>(iy),static_cast<float>(iz)});
+                cuboidEntity->addComponent(cuboidTransform);
+                // cube material
+                cuboidEntity->addComponent(material);
+            }
+        }
+    }
     return rootEntity;
 }
 
@@ -62,10 +62,13 @@ int main(int argc, char* argv[])
 {
     QApplication app(argc, argv);
 
-    Qt3DExtras::Qt3DWindow *view = new Qt3DExtras::Qt3DWindow();
-    QWidget *container = QWidget::createWindowContainer(view);
+    sme::model::Model model{};
+    model.importFile(argv[1]);
 
-    Qt3DCore::QEntity *scene = createScene();
+    Qt3DExtras::Qt3DWindow *view = new Qt3DExtras::Qt3DWindow();
+    QWidget *view_container = QWidget::createWindowContainer(view);
+
+    Qt3DCore::QEntity *scene = createScene(model.getGeometry().getImages());
 
     // Camera
     Qt3DRender::QCamera *camera = view->camera();
@@ -83,7 +86,7 @@ int main(int argc, char* argv[])
     view->show();
 
     QMainWindow mainWin{};
-    mainWin.setCentralWidget(container);
+    mainWin.setCentralWidget(view_container);
     mainWin.show();
 
     return app.exec();
